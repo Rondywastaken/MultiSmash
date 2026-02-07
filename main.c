@@ -2,9 +2,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include <raylib.h>
-
-#include "connection.h"
+#include "raylib.h"
+#include "connection.h"     
 
 #define WIDTH 1920
 #define HEIGHT 1080
@@ -83,6 +82,11 @@ void ActivateMenu(Vector2 *pos1, Vector2 *pos2) {
 }
 
 int main(void) {
+  #ifdef _WIN32
+    struct WSAData data; 
+    WSAStartup(MAKEWORD(2,2), &data);
+  #endif 
+  
   InitWindow(WIDTH, HEIGHT, "MultiSmash");
   SetTargetFPS(120);
 

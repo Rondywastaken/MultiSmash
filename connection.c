@@ -1,14 +1,11 @@
-#include <raylib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <stdlib.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
 
+#include "raylib.h"
 #include "connection.h"
 
 MovePacket server_move = {0};
@@ -19,8 +16,7 @@ pthread_mutex_t move_mutex = PTHREAD_MUTEX_INITIALIZER;
 void *server_thread(void* arg) {
   Vector2 *pos = (Vector2*)arg;
 
-  int server_fd ;
-
+  int server_fd;
   struct sockaddr_in server_addr, client_addr;
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(8080);
@@ -48,7 +44,7 @@ void *server_thread(void* arg) {
     MovePacket incoming_pkt = {0};
 
     // Receive messages
-    int msg_len = recvfrom(server_fd, &incoming_pkt, sizeof(incoming_pkt), 0, (struct sockaddr*)&client_addr, &client_addr_len);
+    int msg_len = recvfrom(server_fd, (char*)&incoming_pkt, sizeof(incoming_pkt), 0, (struct sockaddr*)&client_addr, &client_addr_len);
     if (msg_len == 0) {
       printf("No message was able to be received\n");
     } else if (msg_len < 0) {
@@ -67,8 +63,16 @@ void *server_thread(void* arg) {
     move.pos = *pos;
     pthread_mutex_unlock(&move_mutex);
 
-    sendto(server_fd, &move, sizeof(move), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
+    sendto(server_fd, (char*)&move, sizeof(move), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
   }
+  
+  #ifdef _WIN32
+    closesocket(server_fd);
+    WSACleanup();
+  #else
+    close(server_fd);
+  #endif
+  
   return NULL;
 }
 
@@ -80,7 +84,8 @@ void *client_thread(void *arg) {
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(8080);
 
-  inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
+  //inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
+  inet_pton(AF_INET, "192.168.0.134", &server_addr.sin_addr);
 
   socklen_t client_addr_len = sizeof(client_addr);
   
@@ -91,11 +96,11 @@ void *client_thread(void *arg) {
     move.pos = *pos;
     pthread_mutex_unlock(&move_mutex);
 
-    sendto(client_fd, &move, sizeof(move), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
+    sendto(client_fd, (char*)&move, sizeof(move), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
 
     MovePacket incoming_pkt = {0};
 
-    int msg_len = recvfrom(client_fd, &incoming_pkt, sizeof(incoming_pkt), 0, (struct sockaddr*)&client_addr, &client_addr_len);
+    int msg_len = recvfrom(client_fd, (char*)&incoming_pkt, sizeof(incoming_pkt), 0, (struct sockaddr*)&client_addr, &client_addr_len);
     if (msg_len == 0) {
       printf("No message was able to be received\n");
     } else if (msg_len < 0) {
@@ -107,5 +112,13 @@ void *client_thread(void *arg) {
     client_move.pos = incoming_pkt.pos;
     pthread_mutex_unlock(&move_mutex);
   }
+  
+  #ifdef _WIN32
+    closesocket(client_fd);
+    WSACleanup();
+  #else
+    close(client_fd);
+  #endif
+  
   return NULL;
 }

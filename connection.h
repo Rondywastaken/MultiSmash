@@ -1,4 +1,19 @@
-#include <raylib.h>
+#ifdef _WIN32
+  // Prevent Windows headers from defining things that clash with raylib
+  #define NOGDI             // All GDI defines and routines (clashes with Rectangle)
+  #define NOUSER            // All USER defines and routines (clashes with CloseWindow)
+  #define WIN32_LEAN_AND_MEAN // Speed up build and reduce header bloat
+
+  // include the ones I need
+  #include <winsock2.h>
+  #include <Ws2tcpip.h>
+#else 
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+#endif
+
+#include "raylib.h"
 #include <pthread.h>
 
 typedef struct MovePacket {
