@@ -16,7 +16,7 @@
 #include "raylib.h"
 #include <pthread.h>
 
-typedef struct MovePacket {
+typedef struct {
   Vector2 pos;
 } MovePacket;
 

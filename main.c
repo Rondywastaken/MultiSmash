@@ -1,9 +1,10 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 
 #include "raylib.h"
 #include "connection.h"     
+#include "menu.h"
+#include "state_machine.h"
 
 #define WIDTH 1920
 #define HEIGHT 1080
@@ -48,38 +49,7 @@ void MovePlayer(Player *player, float deltaTime) {
   }
 }
 
-void CreateMenu() {
-  DrawRectangle(WIDTH/2-BTN_WIDTH/2, HEIGHT/2-0.15*HEIGHT, BTN_WIDTH, HEIGHT*0.1, btnColor1);
-  DrawText("HOST GAME", WIDTH/2-BTN_WIDTH/2, HEIGHT/2-0.15*HEIGHT, 100, MAROON);
-  DrawRectangle(WIDTH/2-BTN_WIDTH/2, HEIGHT/2, BTN_WIDTH, HEIGHT*0.1, btnColor2);
-  DrawText("JOIN HOST", WIDTH/2-BTN_WIDTH/2, HEIGHT/2, 100, MAROON);
-}
-
-void ActivateMenu(Vector2 *pos1, Vector2 *pos2) {
-  if (IsKeyPressed(KEY_UP)) {
-    btnColor1 = LIME;
-    btnColor2 = LIGHTGRAY;
-    activeBtn = 0;
-  } else if (IsKeyPressed(KEY_DOWN)) {
-    btnColor2 = LIME;
-    btnColor1 = LIGHTGRAY;
-    activeBtn = 1;
-  }
-  if (IsKeyPressed(KEY_ENTER)) {
-    if (activeBtn == 0) {
-      isHost = 1; 
-      showMenu = 0;
-      pthread_create(&server, NULL, server_thread, (void*)pos1);
-      pthread_detach(server);
-    } else {
-      showMenu = 0;
-      pthread_create(&client, NULL, client_thread, (void*)pos2);
-      pthread_detach(client);
-    }
-    if (isHost) printf("You are the host\n");
-    else printf("Joining host...\n");
-  }
-}
+GameState game_state = STATE_MENU;
 
 int main(void) {
   #ifdef _WIN32
@@ -102,15 +72,25 @@ int main(void) {
   player2.speed = 0.1f;
   player2.color = GREEN;
 
+  InitMenu(WIDTH, HEIGHT);
+
   while (!WindowShouldClose()) {
     BeginDrawing();
       float deltaTime = GetFrameTime();
       DrawFPS(10, 10);
       ClearBackground(WHITE);
-      if (showMenu) {
-        CreateMenu(); 
-        ActivateMenu(&player1.pos, &player2.pos);
-      } else {
+      if (game_state == STATE_MENU) {
+        DrawMenu(); 
+        isHost = UpdateMenu();
+        if (isHost) {
+          pthread_create(&server, NULL, server_thread, (void*)&player1.pos);
+          pthread_detach(server);
+        } else {
+          pthread_create(&client, NULL, client_thread, (void*)&player2.pos);
+          pthread_detach(client);
+        }
+      } 
+      else if (game_state == STATE_PLAYING) {
         // game
         CreatePlatform();
         CreatePlayer(&player1);
