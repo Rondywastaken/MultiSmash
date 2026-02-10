@@ -11,15 +11,12 @@
 #define PLATFORM_WIDTH WIDTH*0.75
 #define VELOCITY 10
 
-#define BTN_WIDTH WIDTH*0.5
-
 int showMenu = 1;
 Color btnColor1 = LIME;
 Color btnColor2 = LIGHTGRAY;
 int activeBtn = 0;
 
-int isHost = 0;
-
+Connection conn_type;
 pthread_t client = 0;
 pthread_t server = 0;
 
@@ -81,26 +78,26 @@ int main(void) {
       ClearBackground(WHITE);
       if (game_state == STATE_MENU) {
         DrawMenu(); 
-        isHost = UpdateMenu();
-        if (isHost) {
+        conn_type = UpdateMenu();
+        if (conn_type == CONN_SERVER) {
           pthread_create(&server, NULL, server_thread, (void*)&player1.pos);
           pthread_detach(server);
-        } else {
+        } else if (conn_type == CONN_CLIENT) {
           pthread_create(&client, NULL, client_thread, (void*)&player2.pos);
           pthread_detach(client);
-        }
+        } 
       } 
       else if (game_state == STATE_PLAYING) {
         // game
         CreatePlatform();
         CreatePlayer(&player1);
         CreatePlayer(&player2);
-        if (isHost) {
+        if (conn_type == CONN_SERVER) {
           MovePlayer(&player1, deltaTime);
           pthread_mutex_lock(&move_mutex);
           player2.pos = server_move.pos;
           pthread_mutex_unlock(&move_mutex);
-        } else {
+        } else if (conn_type == CONN_CLIENT) {
           MovePlayer(&player2, deltaTime);
           pthread_mutex_lock(&move_mutex);
           player1.pos = client_move.pos;

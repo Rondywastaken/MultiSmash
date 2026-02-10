@@ -1,6 +1,7 @@
 #include <pthread.h>
 
 #include "raylib.h"
+#include "connection.h"
 
 typedef struct {
   Vector2 pos;
@@ -17,4 +18,4 @@ typedef struct {
 
 extern void InitMenu(int screen_w, int screen_h);
 extern void DrawMenu(void);
-extern int UpdateMenu(void);
+extern Connection UpdateMenu(void);

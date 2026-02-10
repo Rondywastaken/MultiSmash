@@ -1,10 +1,10 @@
-#ifdef _WIN32
-  // Prevent Windows headers from defining things that clash with raylib
-  #define NOGDI             // All GDI defines and routines (clashes with Rectangle)
-  #define NOUSER            // All USER defines and routines (clashes with CloseWindow)
-  #define WIN32_LEAN_AND_MEAN // Speed up build and reduce header bloat
+#ifndef CONNECTION_H
+#define CONNECTION_H
 
-  // include the ones I need
+#ifdef _WIN32
+  #define NOGDI
+  #define NOUSER
+  #define WIN32_LEAN_AND_MEAN
   #include <winsock2.h>
   #include <Ws2tcpip.h>
 #else 
@@ -20,6 +20,13 @@ typedef struct {
   Vector2 pos;
 } MovePacket;
 
+typedef enum {
+  CONN_NONE,
+  CONN_SERVER,
+  CONN_CLIENT,
+  CONN_REMOTE
+} Connection;
+
 extern MovePacket server_move;
 extern MovePacket client_move;
 extern pthread_mutex_t move_mutex;
@@ -30,4 +37,4 @@ extern void *server_thread(void *arg);
 // function for the server thread to run
 extern void *client_thread(void *arg);
 
-
+#endif

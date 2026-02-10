@@ -40,7 +40,7 @@ void DrawMenu(void) {
   DrawText("JOIN HOST", txt_2.pos.x, txt_2.pos.y, txt_2.font_size, txt_2.color);
 }
 
-int UpdateMenu(void) {
+Connection UpdateMenu(void) {
   if (IsKeyPressed(KEY_UP)) {
     btn_1.color = LIME;
     btn_2.color = LIGHTGRAY;
@@ -53,10 +53,11 @@ int UpdateMenu(void) {
   if (IsKeyPressed(KEY_ENTER)) {
     if (active_btn == 0) {
       game_state = STATE_PLAYING;
-      return 1; // Host
-    } else {
+      return CONN_SERVER;
+    } else if (active_btn == 1) {
       game_state = STATE_PLAYING;
-      return 0; // Client
+      return CONN_CLIENT;
     }
   }
+  return CONN_NONE;
 }
