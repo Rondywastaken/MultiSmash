@@ -2,7 +2,7 @@
 #include <pthread.h>
 
 #include "raylib.h"
-#include "platform.h"
+#include "tile.h"
 #include "connection.h"     
 #include "menu.h"
 #include "state_machine.h"
@@ -31,7 +31,7 @@ int main(void) {
   InitPlayer(&player_1, 1, WIDTH, HEIGHT);
   InitPlayer(&player_2, 2, WIDTH, HEIGHT);
   InitMenu(WIDTH, HEIGHT);
-  InitPlatform(WIDTH, HEIGHT);
+  InitTile(WIDTH, HEIGHT);
 
   while (!WindowShouldClose()) {
     BeginDrawing();
@@ -51,7 +51,7 @@ int main(void) {
       } 
       else if (game_state == STATE_PLAYING) {
         // game
-        DrawPlatform();
+        DrawTile();
         DrawPlayer(&player_1);
         DrawPlayer(&player_2);
         if (conn_type == CONN_SERVER) {
