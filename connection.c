@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -31,11 +30,11 @@ void *server_thread(void* arg) {
     exit(EXIT_FAILURE);
   }
 
-  // bind socket to port 8080 for now 
+  // bind socket to port 8080 for now
   if (bind(server_fd, (struct sockaddr*)&server_addr, server_addr_len) < 0) {
     perror("Failed to bind socket");
     exit(EXIT_FAILURE);
-  } 
+  }
 
   printf("Server listening on port 8080\n");
 
@@ -64,14 +63,14 @@ void *server_thread(void* arg) {
 
     sendto(server_fd, (char*)&move, sizeof(move), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
   }
-  
+
   #ifdef _WIN32
     closesocket(server_fd);
     WSACleanup();
   #else
     close(server_fd);
   #endif
-  
+
   return NULL;
 }
 
@@ -87,7 +86,7 @@ void *client_thread(void *arg) {
   //inet_pton(AF_INET, "192.168.0.134", &server_addr.sin_addr);
 
   socklen_t client_addr_len = sizeof(client_addr);
-  
+
   while (1) {
     MovePacket move = {0};
 
@@ -111,13 +110,13 @@ void *client_thread(void *arg) {
     client_move.pos = incoming_pkt.pos;
     pthread_mutex_unlock(&move_mutex);
   }
-  
+
   #ifdef _WIN32
     closesocket(client_fd);
     WSACleanup();
   #else
     close(client_fd);
   #endif
-  
+
   return NULL;
 }
