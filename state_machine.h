@@ -1,3 +1,6 @@
+#ifndef STATE_MACHINE_H
+#define STATE_MACHINE_H
+
 typedef enum {
   STATE_MENU,
   STATE_PLAYING,
@@ -5,3 +8,5 @@ typedef enum {
 } GameState;
 
 extern GameState game_state;
+
+#endif

@@ -2,51 +2,22 @@
 #include <pthread.h>
 
 #include "raylib.h"
+#include "platform.h"
 #include "connection.h"     
 #include "menu.h"
 #include "state_machine.h"
+#include "player.h"
 
 #define WIDTH 1920
 #define HEIGHT 1080
-#define PLATFORM_WIDTH WIDTH*0.75
-#define VELOCITY 10
-
-int showMenu = 1;
-Color btnColor1 = LIME;
-Color btnColor2 = LIGHTGRAY;
-int activeBtn = 0;
 
 Connection conn_type;
 pthread_t client = 0;
 pthread_t server = 0;
 
-typedef struct Player {
-  Vector2 pos;
-  float speed;
-  Color color;
-} Player;
-
-void CreatePlatform() {
-  DrawRectangle(WIDTH/2-PLATFORM_WIDTH/2, HEIGHT/2+0.15*HEIGHT, PLATFORM_WIDTH, HEIGHT*0.1, GRAY);
-}
-
-void CreatePlayer(Player *player) {
-  DrawRectangle(player->pos.x, player->pos.y, WIDTH*0.03, HEIGHT*0.1, player->color);
-}
-
-void MovePlayer(Player *player, float deltaTime) {
-  if (player->pos.y <= HEIGHT/2+WIDTH*0.03) {
-    player->pos.y += player->speed*deltaTime;
-    player->speed += VELOCITY;
-  }
-  if (IsKeyDown(KEY_D)) {
-    player->pos.x += player->speed*deltaTime;
-  } else if (IsKeyDown(KEY_A)) {
-    player->pos.x -= player->speed*deltaTime; 
-  }
-}
-
 GameState game_state = STATE_MENU;
+Player player_1 = {0};
+Player player_2 = {0};
 
 int main(void) {
   #ifdef _WIN32
@@ -57,19 +28,10 @@ int main(void) {
   InitWindow(WIDTH, HEIGHT, "MultiSmash");
   SetTargetFPS(120);
 
-  Player player1 = {0};
-  player1.pos.x = WIDTH/2;
-  player1.pos.y = HEIGHT/8;
-  player1.speed = 0.1f;
-  player1.color = RED;
-
-  Player player2 = {0};
-  player2.pos.x = WIDTH/2+500;
-  player2.pos.y = HEIGHT/8;
-  player2.speed = 0.1f;
-  player2.color = GREEN;
-
+  InitPlayer(&player_1, 1, WIDTH, HEIGHT);
+  InitPlayer(&player_2, 2, WIDTH, HEIGHT);
   InitMenu(WIDTH, HEIGHT);
+  InitPlatform(WIDTH, HEIGHT);
 
   while (!WindowShouldClose()) {
     BeginDrawing();
@@ -80,27 +42,27 @@ int main(void) {
         DrawMenu(); 
         conn_type = UpdateMenu();
         if (conn_type == CONN_SERVER) {
-          pthread_create(&server, NULL, server_thread, (void*)&player1.pos);
+          pthread_create(&server, NULL, server_thread, (void*)&player_1.pos);
           pthread_detach(server);
         } else if (conn_type == CONN_CLIENT) {
-          pthread_create(&client, NULL, client_thread, (void*)&player2.pos);
+          pthread_create(&client, NULL, client_thread, (void*)&player_2.pos);
           pthread_detach(client);
         } 
       } 
       else if (game_state == STATE_PLAYING) {
         // game
-        CreatePlatform();
-        CreatePlayer(&player1);
-        CreatePlayer(&player2);
+        DrawPlatform();
+        DrawPlayer(&player_1);
+        DrawPlayer(&player_2);
         if (conn_type == CONN_SERVER) {
-          MovePlayer(&player1, deltaTime);
+          UpdatePlayer(&player_1, deltaTime, WIDTH, HEIGHT);
           pthread_mutex_lock(&move_mutex);
-          player2.pos = server_move.pos;
+          player_2.pos = server_move.pos;
           pthread_mutex_unlock(&move_mutex);
         } else if (conn_type == CONN_CLIENT) {
-          MovePlayer(&player2, deltaTime);
+          UpdatePlayer(&player_2, deltaTime, WIDTH, HEIGHT);
           pthread_mutex_lock(&move_mutex);
-          player1.pos = client_move.pos;
+          player_1.pos = client_move.pos;
           pthread_mutex_unlock(&move_mutex);
         }
       }
