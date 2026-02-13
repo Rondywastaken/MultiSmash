@@ -5,6 +5,7 @@
 
 #include "raylib.h"
 #include "connection.h"
+#include "menu.h"
 
 MovePacket server_move = {0};
 MovePacket client_move = {0};
@@ -82,8 +83,9 @@ void *client_thread(void *arg) {
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(8080);
 
-  inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
-  //inet_pton(AF_INET, "192.168.0.134", &server_addr.sin_addr);
+  const char *host_ip = GetIP();
+
+  inet_pton(AF_INET, host_ip, &server_addr.sin_addr);
 
   socklen_t client_addr_len = sizeof(client_addr);
 

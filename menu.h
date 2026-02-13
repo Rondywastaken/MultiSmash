@@ -21,5 +21,6 @@ typedef struct {
 extern void InitMenu(int screen_w, int screen_h);
 extern void DrawMenu(void);
 extern Connection UpdateMenu(void);
+extern char *GetIP(void);
 
 #endif
