@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "connection.h"
 #include "raylib.h"
 #include "state_machine.h"
 #include <stdio.h>
@@ -10,6 +11,9 @@ Button btn_input;
 Text txt_1;
 Text txt_2;
 int active_btn = 0;
+
+Button btn_remote;
+Text txt_remote;
 
 Rectangle textbox;
 
@@ -44,11 +48,20 @@ void InitMenu(int screen_w, int screen_h) {
   btn_input.pos.x = screen_w / 2.0f - btn_1.w / 2.0f;
   btn_input.pos.y = screen_h / 2.0f ;
   btn_input.color = LIGHTGRAY;
-
   textbox.x = btn_input.pos.x;
   textbox.y = btn_input.pos.y;
   textbox.height = btn_input.h; 
   textbox.width = btn_input.w;
+
+  btn_remote.w = screen_w * 0.5f;
+  btn_remote.h = screen_h * 0.1f;
+  btn_remote.pos.x = screen_w / 2.0f - btn_remote.w / 2.0f;
+  btn_remote.pos.y = screen_h / 2.0f + 0.15f * screen_h;
+  btn_remote.color = LIGHTGRAY;
+  txt_remote.font_size = 40;
+  txt_remote.pos.x = screen_w / 2.0f - MeasureText("JOIN REMOTE SERVER", txt_remote.font_size) / 2.0f;
+  txt_remote.pos.y = btn_remote.pos.y + (btn_remote.h / 2.0f) - (txt_remote.font_size / 2.0f);
+  txt_remote.color = MAROON;
 }
 
 void DrawMenu(void) {
@@ -62,6 +75,9 @@ void DrawMenu(void) {
   DrawText(ip, textbox.x + 16, textbox.y + 12, 80, MAROON);
   if (active_btn == 2)
     if (((frames_counter/20)%2) == 0) DrawText("|", textbox.x + 16 + MeasureText(ip, 80), textbox.y + 12, 80, MAROON);
+
+  DrawRectangle(btn_remote.pos.x, btn_remote.pos.y, btn_remote.w, btn_remote.h, btn_remote.color);
+  DrawText("JOIN REMOTE SERVER", txt_remote.pos.x, txt_remote.pos.y, txt_remote.font_size, txt_remote.color);
 }
 
 void UpdateInputBox(int key) {
@@ -79,7 +95,7 @@ void UpdateInputBox(int key) {
 Connection UpdateMenu(void) {
   if (IsKeyPressed(KEY_UP) && active_btn > 0) {
     active_btn--;
-  } else if (IsKeyPressed(KEY_DOWN) && active_btn < 2) {
+  } else if (IsKeyPressed(KEY_DOWN) && active_btn < 3) {
     active_btn++;
   }
 
@@ -88,28 +104,39 @@ Connection UpdateMenu(void) {
       btn_1.color = LIME;
       btn_2.color = LIGHTGRAY;
       btn_input.color = LIGHTGRAY;
+      btn_remote.color = LIGHTGRAY;
       break;
     case 1:
       btn_1.color = LIGHTGRAY;
       btn_2.color = LIME;
       btn_input.color = LIGHTGRAY;
+      btn_remote.color = LIGHTGRAY;
       break;
     case 2:
       btn_1.color = LIGHTGRAY;
       btn_2.color = LIGHTGRAY;
       btn_input.color = LIME;
+      btn_remote.color = LIGHTGRAY;
       UpdateInputBox(GetCharPressed()); 
       frames_counter++;
       break;
+    case 3:
+      btn_1.color = LIGHTGRAY;
+      btn_2.color = LIGHTGRAY;
+      btn_input.color = LIGHTGRAY;
+      btn_remote.color = LIME;
   }
 
   if (IsKeyPressed(KEY_ENTER)) {
     if (active_btn == 0) {
       game_state = STATE_PLAYING;
-      return CONN_SERVER;
+      return CONN_HOST;
     } else if (active_btn == 1) {
       game_state = STATE_PLAYING;
-      return CONN_CLIENT;
+      return CONN_GUEST;
+    } else if (active_btn == 3) {
+      game_state = STATE_PLAYING;
+      return CONN_REMOTE;
     }
   }
   return CONN_NONE;

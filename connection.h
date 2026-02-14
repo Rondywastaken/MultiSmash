@@ -22,19 +22,22 @@ typedef struct {
 
 typedef enum {
   CONN_NONE,
-  CONN_SERVER,
-  CONN_CLIENT,
+  CONN_HOST,
+  CONN_GUEST,
   CONN_REMOTE
 } Connection;
 
-extern MovePacket server_move;
-extern MovePacket client_move;
+extern MovePacket host_move;
+extern MovePacket guest_move;
+extern MovePacket remote_move;
 extern pthread_mutex_t move_mutex;
 
 // function for the server thread to run
-extern void *server_thread(void *arg);
+extern void *host_thread(void *arg);
 
 // function for the server thread to run
+extern void *guest_thread(void *arg);
+
 extern void *client_thread(void *arg);
 
 #endif

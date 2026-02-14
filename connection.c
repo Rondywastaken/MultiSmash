@@ -7,12 +7,13 @@
 #include "connection.h"
 #include "menu.h"
 
-MovePacket server_move = {0};
-MovePacket client_move = {0};
+MovePacket host_move = {0};
+MovePacket guest_move = {0};
+MovePacket remote_move = {0};
 
 pthread_mutex_t move_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void *server_thread(void* arg) {
+void *host_thread(void* arg) {
   Vector2 *pos = (Vector2*)arg;
 
   int server_fd;
@@ -53,7 +54,7 @@ void *server_thread(void* arg) {
     //printf("Received message of size %d\n", msg_len);
 
     pthread_mutex_lock(&move_mutex);
-    server_move.pos = incoming_pkt.pos;
+    host_move.pos = incoming_pkt.pos;
     pthread_mutex_unlock(&move_mutex);
 
     MovePacket move = {0};
@@ -75,7 +76,7 @@ void *server_thread(void* arg) {
   return NULL;
 }
 
-void *client_thread(void *arg) {
+void *guest_thread(void *arg) {
   Vector2 *pos = (Vector2*)arg;
 
   int client_fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -109,8 +110,57 @@ void *client_thread(void *arg) {
     }
 
     pthread_mutex_lock(&move_mutex);
-    client_move.pos = incoming_pkt.pos;
+    guest_move.pos = incoming_pkt.pos;
     pthread_mutex_unlock(&move_mutex);
+  }
+
+  #ifdef _WIN32
+    closesocket(client_fd);
+    WSACleanup();
+  #else
+    close(client_fd);
+  #endif
+
+  return NULL;
+}
+
+void *client_thread(void *arg) {
+  Vector2 *pos = (Vector2*)arg;
+
+  int client_fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+  struct sockaddr_in server_addr, client_addr;
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(8080);
+
+  const char *host_ip = "79.76.34.160";
+
+  inet_pton(AF_INET, host_ip, &server_addr.sin_addr);
+
+  socklen_t client_addr_len = sizeof(client_addr);
+
+  while (1) {
+    MovePacket move = {0};
+
+    pthread_mutex_lock(&move_mutex);
+    move.pos = *pos;
+    pthread_mutex_unlock(&move_mutex);
+
+    sendto(client_fd, (char*)&move, sizeof(move), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
+
+    MovePacket incoming_pkt = {0};
+
+    int msg_len = recvfrom(client_fd, (char*)&incoming_pkt, sizeof(incoming_pkt), 0, (struct sockaddr*)&client_addr, &client_addr_len);
+    if (msg_len == 0) {
+      printf("No message was able to be received\n");
+    } else if (msg_len < 0) {
+      perror("Failed to receive message");
+      exit(EXIT_FAILURE);
+    } else {
+      pthread_mutex_lock(&move_mutex);
+      remote_move.pos = incoming_pkt.pos;
+      pthread_mutex_unlock(&move_mutex);
+    }
   }
 
   #ifdef _WIN32

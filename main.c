@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 
@@ -12,8 +13,9 @@
 #define HEIGHT 1080
 
 Connection conn_type;
-pthread_t client = 0;
-pthread_t server = 0;
+pthread_t guest = 0;
+pthread_t host = 0;
+pthread_t remote = 0;
 
 GameState game_state = STATE_MENU;
 Player player_1 = {0};
@@ -41,36 +43,45 @@ int main(void) {
       if (game_state == STATE_MENU) {
         DrawMenu(); 
         conn_type = UpdateMenu();
-        if (conn_type == CONN_SERVER) {
-          pthread_create(&server, NULL, server_thread, (void*)&player_1.pos);
-          pthread_detach(server);
-        } else if (conn_type == CONN_CLIENT) {
-          pthread_create(&client, NULL, client_thread, (void*)&player_2.pos);
-          pthread_detach(client);
-        } 
+        if (conn_type == CONN_HOST) {
+          pthread_create(&host, NULL, host_thread, (void*)&player_1.pos);
+          pthread_detach(host);
+        } else if (conn_type == CONN_GUEST) {
+          pthread_create(&guest, NULL, guest_thread, (void*)&player_2.pos);
+          pthread_detach(guest);
+        } else if (conn_type == CONN_REMOTE) {
+          pthread_create(&remote, NULL, client_thread, (void*)&player_1.pos);
+          pthread_detach(remote);
+        }
       } 
       else if (game_state == STATE_PLAYING) {
         // game
         DrawTile();
         DrawPlayer(&player_1);
         DrawPlayer(&player_2);
-        if (conn_type == CONN_SERVER) {
+        if (conn_type == CONN_HOST) {
           UpdatePlayer(&player_1, deltaTime, WIDTH, HEIGHT);
           pthread_mutex_lock(&move_mutex);
-          player_2.pos = server_move.pos;
+          player_2.pos = host_move.pos;
           pthread_mutex_unlock(&move_mutex);
-        } else if (conn_type == CONN_CLIENT) {
+        } else if (conn_type == CONN_GUEST) {
           UpdatePlayer(&player_2, deltaTime, WIDTH, HEIGHT);
           pthread_mutex_lock(&move_mutex);
-          player_1.pos = client_move.pos;
+          player_1.pos = guest_move.pos;
+          pthread_mutex_unlock(&move_mutex);
+        } else if (conn_type == CONN_REMOTE) {
+          UpdatePlayer(&player_1, deltaTime, WIDTH, HEIGHT);
+          pthread_mutex_lock(&move_mutex);
+          player_2.pos = remote_move.pos;
           pthread_mutex_unlock(&move_mutex);
         }
       }
     EndDrawing();
   }
 
-  if (server != 0) pthread_join(server, NULL);
-  if (client != 0) pthread_join(client, NULL);
+  if (host != 0) pthread_join(host, NULL);
+  if (guest != 0) pthread_join(guest, NULL);
+  if (remote != 0) pthread_join(remote, NULL);
 
   CloseWindow();
 
