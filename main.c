@@ -1,7 +1,7 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 
+#include "packet.h"
 #include "raylib.h"
 #include "tile.h"
 #include "connection.h"     
@@ -35,6 +35,9 @@ int main(void) {
   InitMenu(WIDTH, HEIGHT);
   InitTile(WIDTH, HEIGHT);
 
+  Packet pkt = {0}; 
+  pkt.pkt_type = PKT_CONNECT;
+
   while (!WindowShouldClose()) {
     BeginDrawing();
       float deltaTime = GetFrameTime();
@@ -43,18 +46,27 @@ int main(void) {
       if (game_state == STATE_MENU) {
         DrawMenu(); 
         conn_type = UpdateMenu();
-        if (conn_type == CONN_HOST) {
-          pthread_create(&host, NULL, host_thread, (void*)&player_1.pos);
-          pthread_detach(host);
-        } else if (conn_type == CONN_GUEST) {
-          pthread_create(&guest, NULL, guest_thread, (void*)&player_2.pos);
-          pthread_detach(guest);
-        } else if (conn_type == CONN_REMOTE) {
-          pthread_create(&remote, NULL, client_thread, (void*)&player_1.pos);
-          pthread_detach(remote);
+        if (conn_type != CONN_NONE) {
+          if (conn_type == CONN_HOST) {
+            pkt.pkt_type = PKT_GAME_UPDATE; 
+            pkt.pos.x = player_1.pos.x;
+            pkt.pos.y = player_1.pos.y;
+            pthread_create(&host, NULL, host_thread, (void*)&pkt);
+            pthread_detach(host);
+          } else if (conn_type == CONN_GUEST) {
+            pkt.pos.x = player_2.pos.x;
+            pkt.pos.y = player_2.pos.y;
+            pthread_create(&guest, NULL, guest_thread, (void*)&pkt);
+            pthread_detach(guest);
+          } else if (conn_type == CONN_REMOTE) {
+            pkt.pos.x = player_1.pos.x;
+            pkt.pos.y = player_1.pos.y;
+            pthread_create(&remote, NULL, client_thread, (void*)&pkt);
+          }
+          game_state = STATE_PLAYING;
+          pkt.pkt_type = PKT_GAME_UPDATE;
         }
-      } 
-      else if (game_state == STATE_PLAYING) {
+      } else if (game_state == STATE_PLAYING) {
         // game
         DrawTile();
         DrawPlayer(&player_1);
@@ -62,22 +74,36 @@ int main(void) {
         if (conn_type == CONN_HOST) {
           UpdatePlayer(&player_1, deltaTime, WIDTH, HEIGHT);
           pthread_mutex_lock(&move_mutex);
-          player_2.pos = host_move.pos;
+          player_2.pos.x = host_move.pos.x;
+          player_2.pos.y = host_move.pos.y;
+
+          pkt.pos.x = player_1.pos.x;
+          pkt.pos.y = player_1.pos.y;
           pthread_mutex_unlock(&move_mutex);
         } else if (conn_type == CONN_GUEST) {
           UpdatePlayer(&player_2, deltaTime, WIDTH, HEIGHT);
           pthread_mutex_lock(&move_mutex);
-          player_1.pos = guest_move.pos;
+          player_1.pos.x = guest_move.pos.x;
+          player_1.pos.y = guest_move.pos.y;
+
+          pkt.pos.x = player_2.pos.x;
+          pkt.pos.y = player_2.pos.y;
           pthread_mutex_unlock(&move_mutex);
         } else if (conn_type == CONN_REMOTE) {
           UpdatePlayer(&player_1, deltaTime, WIDTH, HEIGHT);
           pthread_mutex_lock(&move_mutex);
-          player_2.pos = remote_move.pos;
+          player_2.pos.x = remote_move.pos.x;
+          player_2.pos.y = remote_move.pos.y;
+
+          pkt.pos.x = player_1.pos.x;
+          pkt.pos.y = player_1.pos.y;
           pthread_mutex_unlock(&move_mutex);
         }
       }
     EndDrawing();
   }
+
+  pkt.pkt_type = PKT_DISCONNECT;
 
   if (host != 0) pthread_join(host, NULL);
   if (guest != 0) pthread_join(guest, NULL);

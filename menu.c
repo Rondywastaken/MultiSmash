@@ -129,13 +129,10 @@ Connection UpdateMenu(void) {
 
   if (IsKeyPressed(KEY_ENTER)) {
     if (active_btn == 0) {
-      game_state = STATE_PLAYING;
       return CONN_HOST;
     } else if (active_btn == 1) {
-      game_state = STATE_PLAYING;
       return CONN_GUEST;
     } else if (active_btn == 3) {
-      game_state = STATE_PLAYING;
       return CONN_REMOTE;
     }
   }

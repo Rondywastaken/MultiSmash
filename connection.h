@@ -14,11 +14,8 @@
 #endif
 
 #include "raylib.h"
+#include "packet.h"
 #include <pthread.h>
-
-typedef struct {
-  Vector2 pos;
-} MovePacket;
 
 typedef enum {
   CONN_NONE,
@@ -27,9 +24,9 @@ typedef enum {
   CONN_REMOTE
 } Connection;
 
-extern MovePacket host_move;
-extern MovePacket guest_move;
-extern MovePacket remote_move;
+extern Packet host_move;
+extern Packet guest_move;
+extern Packet remote_move;
 extern pthread_mutex_t move_mutex;
 
 // function for the server thread to run
