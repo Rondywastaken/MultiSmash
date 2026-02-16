@@ -1,5 +1,7 @@
+#include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/select.h>
 #include <unistd.h>
 #include <pthread.h>
 
@@ -91,6 +93,9 @@ void *guest_thread(void *arg) {
 
   socklen_t client_addr_len = sizeof(client_addr);
 
+  double last_print_time = GetTime();
+  int packets_received_counter = 0;
+
   while (1) {
     Packet outgoing_pkt = {0};
 
@@ -115,6 +120,16 @@ void *guest_thread(void *arg) {
     pthread_mutex_lock(&move_mutex);
     guest_move.pos = incoming_pkt.pos;
     pthread_mutex_unlock(&move_mutex);
+    packets_received_counter++;
+
+    double current_time = GetTime();
+    if (current_time - last_print_time >= 1.0) {
+      printf("Status: Connected | Packets RX/sec: %d\n", packets_received_counter);
+      
+      // Reset counter and timer
+      packets_received_counter = 0;
+      last_print_time = current_time;
+    }
   }
 
   #ifdef _WIN32
@@ -131,44 +146,47 @@ void *client_thread(void *arg) {
   Packet *pkt = (Packet*)arg;
 
   int client_fd = socket(AF_INET, SOCK_DGRAM, 0);
-
   struct sockaddr_in server_addr, client_addr;
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(8080);
-
   const char *host_ip = "79.76.34.160";
-
   inet_pton(AF_INET, host_ip, &server_addr.sin_addr);
-
   socklen_t client_addr_len = sizeof(client_addr);
 
-  struct timeval tv;
-  tv.tv_sec = 0;
-  tv.tv_usec = 100000; // 100000 microseconds = 0.1 seconds
-  setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+  double last_print_time = GetTime();
+  int packets_received_counter = 0;
 
   while (pkt->pkt_type != PKT_DISCONNECT) {
-    Packet outgoing_pkt = {0};
-
     pthread_mutex_lock(&move_mutex);
-    outgoing_pkt.pkt_type = pkt->pkt_type;
-    outgoing_pkt.pos.x = pkt->pos.x;
-    outgoing_pkt.pos.y = pkt->pos.y;
+    Packet outgoing_pkt = *pkt;
     pthread_mutex_unlock(&move_mutex);
-
     sendto(client_fd, (char*)&outgoing_pkt, sizeof(outgoing_pkt), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
 
-    Packet incoming_pkt = {0};
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(client_fd, &readfds);
+    struct timeval tv = {0, 0};
 
-    int msg_len = recvfrom(client_fd, (char*)&incoming_pkt, sizeof(incoming_pkt), 0, (struct sockaddr*)&client_addr, &client_addr_len);
-    if (msg_len == 0) {
-      printf("No message was able to be received\n");
-    } else if (msg_len < 0) {
-      continue;
-    } else {
-      pthread_mutex_lock(&move_mutex);
-      remote_move.pos = incoming_pkt.pos;
-      pthread_mutex_unlock(&move_mutex);
+    // Peak into client socket, so we don't end up deadlocking the program with recvfrom
+    int ready = select(client_fd+1, &readfds, NULL, NULL, &tv);
+    if (ready > 0) {
+      Packet incoming_pkt = {0};
+      int msg_len = recvfrom(client_fd, (char*)&incoming_pkt, sizeof(incoming_pkt), 0, (struct sockaddr*)&client_addr, &client_addr_len);
+      if (msg_len > 0) {
+        pthread_mutex_lock(&move_mutex);
+        remote_move.pos = incoming_pkt.pos;
+        pthread_mutex_unlock(&move_mutex);
+        packets_received_counter++;
+      }
+    }
+
+    double current_time = GetTime();
+    if (current_time - last_print_time >= 1.0) {
+      printf("Status: Connected | Packets RX/sec: %d\n", packets_received_counter);
+      
+      // Reset counter and timer
+      packets_received_counter = 0;
+      last_print_time = current_time;
     }
   }
 
